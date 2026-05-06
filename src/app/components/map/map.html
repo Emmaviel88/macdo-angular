@@ -1,5 +1,61 @@
-<div style="margin-botttom: 10px;">
+<div class="saisie">
     <input type="text" id="search" placeholder="Entrez une ville..." [(ngModel)]="searchQuery" style="padding: 8px; width:300px; margin-right: 10px;">
     <button (click)="search()" style="padding: 8px 16px;">Rechercher</button>
 </div>
+
+<div class="poi-search-container">
+  <h2>Recherche de Points d'Intérêt (POIs)</h2>
+
+  <div class="search-form">
+    <div class="form-group">
+      <label for="lat">Latitude: {{ lat }}</label>
+      <input type="number" id="lat" [(ngModel)]="lat" step="0.0001" placeholder="Ex: 48.1747684">
+    </div>
+
+    <div class="form-group">
+      <label for="lon">Longitude: {{ lon }}</label>
+      <input type="number" id="lon" [(ngModel)]="lon" step="0.0001" placeholder="Ex: 6.4503643">
+    </div>
+
+    <div class="form-group">
+      <label for="radius">Rayon (m):</label>
+      <input type="number" id="radius" [(ngModel)]="radius" placeholder="Ex: 500">
+    </div>
+
+    <div class="form-group">
+      <label for="amenity">Type de POI:</label>
+      <select id="amenity" [(ngModel)]="amenity">
+        <option value="restaurant">Restaurant</option>
+        <option value="fast-food">Fast-food</option>
+        <option value="cafe">Café</option>
+        <option value="pharmacy">Pharmacie</option>
+        <option value="hotel">Hôtel</option>
+        <option value="supermarket">Supermarché</option>
+        <option value="">Tous</option>
+      </select>
+    </div>
+
+    <button (click)="searchPOIs()" [disabled]="isLoading">
+      {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
+    </button>
+  </div>
+  
+  @if(error) {
+    <div class="error-message">
+      {{ error }}
+    </div>
+  }
+  
+  <div class="pois-results">
+    <h3>Résultats ({{ pois.length }})</h3>
+    <ul>
+    <li *ngFor="let poi of pois">
+        <strong>{{ poi.name }}</strong> ({{ poi.type }})
+        <br>
+        <small>Lat: {{ poi.lat.toFixed(4) }}, Lon: {{ poi.lon.toFixed(4) }}, Distance: {{ poi.distance?.toFixed(0) }} m</small>
+      </li>    
+    </ul>
+  </div>
+</div>
+
 <div id="map" style="height: 1200px; width: 100%;"></div>
