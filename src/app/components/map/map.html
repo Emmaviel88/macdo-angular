@@ -1,12 +1,18 @@
 <div class="saisie">
     <input type="text" id="search" placeholder="Entrez une ville..." [(ngModel)]="searchQuery" style="padding: 8px; width:300px; margin-right: 10px;">
-    <button (click)="search()" style="padding: 8px 16px;">Rechercher</button>
+
+    <input type="number" [(ngModel)]="limit" placeholder="Limite" style="padding: 8px; width:150px; margin-right: 10px;">
+    <button (click)="search()" [disabled]="isLoading">
+      {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
+    </button>
+    <!-- <button (click)="search()" style="padding: 8px 16px;">Rechercher</button> -->
 </div>
 
 <div class="poi-search-container">
   <h2>Recherche de Points d'Intérêt (POIs)</h2>
 
   <div class="search-form">
+    <!--
     <div class="form-group">
       <label for="lat">Latitude: {{ lat }}</label>
       <input type="number" id="lat" [(ngModel)]="lat" step="0.0001" placeholder="Ex: 48.1747684">
@@ -34,10 +40,7 @@
         <option value="">Tous</option>
       </select>
     </div>
-
-    <button (click)="searchPOIs()" [disabled]="isLoading">
-      {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
-    </button>
+    -->
   </div>
   
   @if(error) {
@@ -47,15 +50,24 @@
   }
   
   <div class="pois-results">
-    <h3>Résultats ({{ pois.length }})</h3>
+    <h3>{{ pois.length }} restaurants trouvés</h3>
+    
     <ul>
-    <li *ngFor="let poi of pois">
-        <strong>{{ poi.name }}</strong> ({{ poi.type }})
-        <br>
-        <small>Lat: {{ poi.lat.toFixed(4) }}, Lon: {{ poi.lon.toFixed(4) }}, Distance: {{ poi.distance?.toFixed(0) }} m</small>
-      </li>    
+    <!--<li *ngFor="let poi of pois">-->
+      @for(poi of pois; track poi.name; let i = $index) {
+        <li>
+          <strong>{{ poi.id }}. {{ poi.name }}</strong> ({{ poi.type }})
+          <br>
+          <small>Distance: {{ poi.distance?.toFixed(1) }} km, Adresse: {{ poi.address }} {{ poi.address?.village }}</small>
+          <small>Lat: {{ poi.lat.toFixed(4) }}, Lon: {{ poi.lon.toFixed(4) }}</small>
+          <small>Phone: {{ poi.extratags?.phone }} - Hours: {{ poi.extratags?.hours }}</small>
+          <a href="{{ poi.extratags?.website }}" target="_blank">Site web</a>
+        </li>
+      }    
     </ul>
+    
   </div>
 </div>
 
-<div id="map" style="height: 1200px; width: 100%;"></div>
+
+<div id="map" style="height: 600px; width: 100%;"></div>

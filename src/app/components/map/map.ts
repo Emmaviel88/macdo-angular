@@ -16,18 +16,26 @@ import { Poi, POIFinderService } from '../../services/poifinder';
 export class Map implements OnInit, AfterViewInit {
   private map!: L.Map;
   searchQuery: string = '';
-  lat: number = 48.1747684; // Épinal par défaut
-  lon: number = 6.4503643;
-  radius: number = 1000;
-  amenity: string = 'restaurant';
-  position: Poi | null = null;
+  public lat: number = 48.1747684; // Épinal par défaut
+  public lon: number = 6.4503643;
+  public limit: number = 5;
+  public radius: number = 1000;
+  public amenity: string = 'restaurant';
+  public position!: Poi; //| null = null;
   pois: Poi[] = [];
   isLoading: boolean = false;
   error: string | null = null;
-
+  markers: L.Marker[] = [];
+  public mcdoIcon!: L.Icon;
+  
   constructor(private http: HttpClient, private poiFinder: POIFinderService, private cdr: ChangeDetectorRef) {}
 
-  ngOnInit(): void {}
+  // Créer une icône personnalisée pour McDonald's
+
+  ngOnInit(): void {
+
+  }
+  
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -54,15 +62,25 @@ export class Map implements OnInit, AfterViewInit {
       shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
     });
 
+    this.mcdoIcon = L.icon({
+      iconUrl: 'mcdonalds.ico',
+      iconSize: [40, 30], // Taille de l'icône
+      iconAnchor: [20, 30], // Point d'ancrage (centre en bas)
+      popupAnchor: [0, -30] // Position de la popup
+    });
+
+    console.log('72: mcdoIcon:', this.mcdoIcon);
+
     // Ajout d'un marqueur pour indiquer la position actuelle
-    L.marker(initialMapCenter).addTo(this.map)
-      .bindPopup('Vous êtes ici !')
-      .openPopup();
+    // L.marker(initialMapCenter).addTo(this.map)
+    //   .bindPopup('Vous êtes ici !')
+    //   .openPopup();
   }  
 
   search(): void {
     if(!this.searchQuery.trim()) {
       console.error('La requête de recherche est vide.');
+      alert('La requête de recherche est vide !');
       return;
     }
 
@@ -79,13 +97,21 @@ export class Map implements OnInit, AfterViewInit {
           this.position = {
             name: results[0].display_name,
             type: 'location',
-            lat,
-            lon
+            lat: lat,
+            lon: lon
           };
-          console.log('Position trouvée : ', this.position);
-          // L.marker([lat, lon]).addTo(this.map)
+
+          this.lat = parseFloat(results[0].lat);
+          this.lon = parseFloat(results[0].lon);
+
+          console.log(`102: lieu: ${results[0].display_name}, Lat: ${results[0].lat} - Lon: ${results[0].lon}`);
+          console.log('103: Position trouvée : ', this.position);
+          L.marker([lat, lon]).addTo(this.map);
           //   .bindPopup(`${this.searchQuery.toLocaleUpperCase()}. <br>Lat: ${lat}, <br>Lon: ${lon}`)
           //   .openPopup();
+
+          // Appel la fonction de recherche de POIS à proximité de la position saisie
+          this.searchPOIs();
         } else {
           alert('Ville non trouvée.');
         }
@@ -95,42 +121,21 @@ export class Map implements OnInit, AfterViewInit {
         alert("Erreur lors de la recherche");
       }
     });
-  }
+    // Attendre la fin de la fonction
 
-  searchPOIs(): void {
-    this.isLoading = true;
-    this.error = null;
-    this.search();
-
-    // Utilisation d'Overpass pour rechercher les POIs autour de la position
-    this.poiFinder.searchPoisByOverpass(this.lat, this.lon, this.radius, this.amenity).subscribe({
-      next: (pois) => {
-        console.log('POIs retournés : ', pois);
-        this.pois = pois;
-        console.log(`isLoading avant mise à jour : ${this.isLoading}`);
-        this.isLoading = false;
-        console.log(`isLoading après mise à jour : ${this.isLoading}`);
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = 'Erreur lors de la recherche des POIs';
-        console.error(err);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
   }
 
   // searchPOIs(): void {
-  // this.isLoading = true;
-  // this.error = null;
+  //   this.isLoading = true;
+  //   this.error = null;
+  //   this.search();
 
-    // Utilisation d'Overpass pour rechercher les POIs autour de la position
-  //   this.poiFinder.searchPOIsbyNominatim(this.lat, this.lon, this.radius, 'restaurant').subscribe({
+  //   // Utilisation d'Overpass pour rechercher les POIs autour de la position
+  //   this.poiFinder.searchPoisByOverpass(this.lat, this.lon, this.radius, this.amenity).subscribe({
   //     next: (pois) => {
-  //       console.log('108: POIs retournés : ', pois);
+  //       console.log('POIs retournés : ', pois);
   //       this.pois = pois;
-  //       console.log(`110: isLoading avant mise à jour : ${this.isLoading}`);
+  //       console.log(`isLoading avant mise à jour : ${this.isLoading}`);
   //       this.isLoading = false;
   //       console.log(`isLoading après mise à jour : ${this.isLoading}`);
   //       this.cdr.detectChanges();
@@ -143,4 +148,55 @@ export class Map implements OnInit, AfterViewInit {
   //     }
   //   });
   // }
+
+  searchPOIs(): void {
+    this.isLoading = true;
+    this.error = null;
+
+    // Utilisation de Nominatim pour rechercher les POIs autour de la position
+    this.poiFinder.searchPOIsbyNominatim(this.position.lat, this.position.lon, this.searchQuery, this.limit).subscribe({
+      next: (pois) => {
+        // console.log('108: POIs retournés : ', pois);
+        this.pois = pois;
+        if (pois.length > 0) {
+          this.clearMarkers(); // Supprimer les anciens markers avant d'ajouter les nouveaux
+          pois.forEach(element => {
+            console.log('Ajout du marker pour : ', element.address);
+            this.addMarker(element.lat, element.lon, this.mcdoIcon, element.extratags, element.id || 0 ); // Ajouter un marker pour chaque POI trouvé
+          });
+          // // Centrer la carte sur le premier POI trouvé
+          // const firstPoi = pois[0];
+          // this.map.setView([firstPoi.lat, firstPoi.lon], 13);
+        }
+        // console.log(`110: isLoading avant mise à jour : ${this.isLoading}`);
+        this.isLoading = false;
+        // console.log(`isLoading après mise à jour : ${this.isLoading}`);
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = 'Erreur lors de la recherche des POIs';
+        console.error(err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  addMarker(lat: number, lng: number, mkr: L.Icon, extratags: any, id: number): void {
+    console.log('extratags: ', extratags);
+
+    // Ajouter un nouveau marker
+    const newMarker = L.marker([lat, lng], { icon: mkr })
+      .addTo(this.map)
+      .bindPopup(`${id}. ${this.pois[id]?.name || 'POI'}<br><a href=${extratags.website} target="_blank">Site web</a><br> Tél: ${extratags.phone}<br>Horaires: ${extratags.hours}<br><small>Coordonnées: Lat: ${lat}, Lon: ${lng}</small>`);
+    this.markers.push(newMarker); // Stocker le marker dans le tableau
+  }
+
+  clearMarkers(): void {
+    // Parcourir tous les markers et les supprimer de la carte
+    this.markers.forEach(marker => {
+      this.map.removeLayer(marker);
+    });
+    this.markers = []; // Vider le tableau
+  }
 } 
