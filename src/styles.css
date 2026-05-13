@@ -1,1 +1,12 @@
 /* You can add global styles to this file, and also import other style files */
+.mcdo-tooltip {
+    color:#ffc400;
+    background-color: rgb(220, 0, 0); 
+    border-radius: 25%;
+    width: 15px;
+    height: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+}

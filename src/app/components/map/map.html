@@ -53,21 +53,26 @@
     <h3>{{ pois.length }} restaurants trouvés</h3>
     
     <ul>
-    <!--<li *ngFor="let poi of pois">-->
-      @for(poi of pois; track poi.name; let i = $index) {
+    
+      @for(poi of pois; track poi.id; let i = $index) {
         <li>
           <strong>{{ poi.id }}. {{ poi.name }}</strong> ({{ poi.type }})
           <br>
           <small>Distance: {{ poi.distance?.toFixed(1) }} km, Adresse: {{ poi.address }} {{ poi.address?.village }}</small>
           <small>Lat: {{ poi.lat.toFixed(4) }}, Lon: {{ poi.lon.toFixed(4) }}</small>
-          <small>Phone: {{ poi.extratags?.phone }} - Hours: {{ poi.extratags?.hours }}</small>
-          <a href="{{ poi.extratags?.website }}" target="_blank">Site web</a>
+          <small>Tél.: {{ poi.extratags?.phone }} - Horaires: {{ poi.extratags?.hours }}</small>
+          @if(poi.extratags?.website) {
+            <a href="{{ poi.extratags?.website }}" target="_blank">Site web</a>
+          } @else {
+            <span>Site web non disponible</span>
+          }
         </li>
       }    
     </ul>
     
   </div>
+
 </div>
 
 
-<div id="map" style="height: 600px; width: 100%;"></div>
+<div id="map" style="height: 800px; width: 100%;"></div>

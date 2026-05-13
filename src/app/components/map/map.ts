@@ -43,8 +43,8 @@ export class Map implements OnInit, AfterViewInit {
 
   private initMap(): void {
     // Coordonnées de Paris par défaut
-    // const initialMapCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
-    const initialMapCenter = {lat: 48.1295499, lng: 6.6753083}; // Tendon
+    const initialMapCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
+    // const initialMapCenter = {lat: 48.1295499, lng: 6.6753083}; // Tendon
 
     // Initialisation de la carte
     this.map = L.map('map').setView(initialMapCenter, 13);
@@ -92,7 +92,7 @@ export class Map implements OnInit, AfterViewInit {
         if(results && results.length >0) {
           const lat = parseFloat(results[0].lat);
           const lon = parseFloat(results[0].lon);
-          this.map.setView([lat, lon], 13);
+          this.map.setView([lat, lon], 10);
 
           this.position = {
             name: results[0].display_name,
@@ -106,7 +106,7 @@ export class Map implements OnInit, AfterViewInit {
 
           console.log(`102: lieu: ${results[0].display_name}, Lat: ${results[0].lat} - Lon: ${results[0].lon}`);
           console.log('103: Position trouvée : ', this.position);
-          L.marker([lat, lon]).addTo(this.map);
+          // L.marker([lat, lon], { title: this.searchQuery.charAt(0).toUpperCase() + this.searchQuery.slice(1) }).addTo(this.map);
           //   .bindPopup(`${this.searchQuery.toLocaleUpperCase()}. <br>Lat: ${lat}, <br>Lon: ${lon}`)
           //   .openPopup();
 
@@ -150,8 +150,11 @@ export class Map implements OnInit, AfterViewInit {
   // }
 
   searchPOIs(): void {
+    let horaires : string = '';
     this.isLoading = true;
     this.error = null;
+
+    this.clearMarkers(); // Supprimer les anciens markers avant d'ajouter les nouveaux
 
     // Utilisation de Nominatim pour rechercher les POIs autour de la position
     this.poiFinder.searchPOIsbyNominatim(this.position.lat, this.position.lon, this.searchQuery, this.limit).subscribe({
@@ -161,7 +164,16 @@ export class Map implements OnInit, AfterViewInit {
         if (pois.length > 0) {
           this.clearMarkers(); // Supprimer les anciens markers avant d'ajouter les nouveaux
           pois.forEach(element => {
-            console.log('Ajout du marker pour : ', element.address);
+            // this.http.get<any>(`https://nominatim.openstreetmap.org/reverse?lat=${element.lat}&lon=${element.lon}&format=json`).subscribe({
+            //   next: (result) => {
+            //     console.log('map.ts-168: Résultat de la requête Nominatim Reverse : ', result);
+            //     element.address = `${result.address.road || ''}, ${result.address.postcode || ''} - ${result.address.village || result.address.city || result}`;
+            //   },
+            //   error: (err) => {
+            //     console.error('Erreur lors de la requête Nominatim Reverse : ', err);
+            //     element.address = 'Adresse non disponible';
+            //   }
+            // });
             this.addMarker(element.lat, element.lon, this.mcdoIcon, element.extratags, element.id || 0 ); // Ajouter un marker pour chaque POI trouvé
           });
           // // Centrer la carte sur le premier POI trouvé
@@ -186,9 +198,20 @@ export class Map implements OnInit, AfterViewInit {
     console.log('extratags: ', extratags);
 
     // Ajouter un nouveau marker
+    // const newMarker = L.marker([lat, lng], { icon: mkr, title: `N° ${id}` })
     const newMarker = L.marker([lat, lng], { icon: mkr })
       .addTo(this.map)
-      .bindPopup(`${id}. ${this.pois[id]?.name || 'POI'}<br><a href=${extratags.website} target="_blank">Site web</a><br> Tél: ${extratags.phone}<br>Horaires: ${extratags.hours}<br><small>Coordonnées: Lat: ${lat}, Lon: ${lng}</small>`);
+      .addTo(this.map)
+      .bindPopup(`${id}. ${this.pois[id-1]?.name || 'POI'} 
+                        - ${this.pois[id-1]?.address || 'Adresse non disponible'}<br>
+                        ${extratags.website ? `<a href="${extratags.website}" target="_blank">Site web</a><br>` : '<span>Site web non disponible</span><br>'}
+                         Tél: ${extratags.phone}<br>
+                         Horaires: ${extratags.hours}<br>
+                         <small>Coordonnées: Lat: ${lat}, Lon: ${lng}</small>`)
+      .bindTooltip(`N° ${id}`, 
+        { permanent: false, // s'affiche quand le pointeur de la souris est au-dessus du marker
+          direction: 'auto', // positionnement automatique du tooltip
+          className: 'mcdo-tooltip' });
     this.markers.push(newMarker); // Stocker le marker dans le tableau
   }
 

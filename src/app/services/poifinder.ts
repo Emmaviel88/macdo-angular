@@ -40,21 +40,30 @@ export class POIFinderService {
   // https://nominatim.openstreetmap.org/search?format=json&q=McDonald's&viewbox=2.3422,48.8466,2.3622,48.8666&bounded=1&limit=20
   // https://nominatim.openstreetmap.org/search?format=json&q=McDonald%27s&viewbox=2.3422,48.8466,2.3622,48.8666&bounded=1&limit=2&addressdetails=1&extratags=1
   // https://nominatim.openstreetmap.org/search?format=json&q=McDonald%27s+Paris+France&limit=10
+  
+  // https://nominatim.openstreetmap.org/search?amenity=McDonald%27s&city=Epinal&country=Fr&format=jsonv2
+
+  // Requête 'reverse' valide pour Nominatim :
+  // https://nominatim.openstreetmap.org/reverse?lat=48.9010502&lon=6.0641486&format=json
+
+  // Adresse interface Nominatim :
+  // https://nominatim.openstreetmap.org/ui/search.html
 
   searchPOIsbyNominatim(placeLat: number, placeLon: number, place: string, limit: number = 5): Observable<Poi[]> {
     
-    const searchQuery = place ? `McDonald's+${place}` : "McDonald's+Paris+France"; // Par défaut, recherche de McDonald's à Paris
+    // Si un lieu est fourni dans place, on l'utilise pour construire la requête de recherche, sinon on utilise une requête par défaut centrée sur Paris
+    const searchQuery = place ? `McDonald's+${place}+Fr` : "McDonald's+Paris+France"; // Par défaut, recherche de McDonald's à Paris
 
     console.log('Recherche de POIs avec Nominatim pour : ', searchQuery);
 
     let params = new HttpParams()
-      .set('format', 'json')
-      .set('q', searchQuery)
-      .set('limit', limit.toString())
-      .set('addressdetails', '1')
-      .set('extratags', '1');
+    .set('q', searchQuery)
+    .set('limit', limit.toString())
+    .set('addressdetails', '1')
+    .set('extratags', '1')
+    .set('format', 'jsonv2');
 
-    console.log('Recherche Nominatim avec params : ', params.toString());
+    console.log('poifinder-66: Recherche Nominatim avec params : ', params.toString());
 
     const headers = new HttpHeaders({
       'User-Agent': this.userAgent
@@ -76,11 +85,18 @@ export class POIFinderService {
             lat: parseFloat(item.lat),
             lon: parseFloat(item.lon),
             distance: (this.calculateDistance(placeLat, placeLon, item.lat, item.lon)), 
-            address: `${item.address.road || ''}, ${item.address.postcode || ''} - ${item.address.village || item.address.city}`,
+            address: `${item.address.road || ''}, ${item.address.postcode || ''} - ${item.address.village || item.address.city || item.address.town}`,
             extratags: {
               phone: (item.extratags?.phone ?? item.extratags?.['contact:phone']) || '',
               website: (item.extratags?.website ?? item.extratags?.['contact:website']) || '',
-              hours: item.extratags.opening_hours || ''
+              hours: item.extratags.opening_hours?.toString()
+                        .replace(/\bMo\b/g, "Lun")
+                        .replace(/\bTu\b/g, "Mar")
+                        .replace(/\bWe\b/g, "Mer")
+                        .replace(/\bTh\b/g, "Jeu")
+                        .replace(/\bFr\b/g, "Ven")
+                        .replace(/\bSa\b/g, "Sam")
+                        .replace(/\bSu\b/g, "Dim") || 'Pas d\'information'
             }
           }));
       }),
