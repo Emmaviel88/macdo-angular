@@ -1,20 +1,21 @@
-import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef, signal, OnDestroy, Output, EventEmitter } from '@angular/core';
 import * as L from 'leaflet';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Poi, POIFinderService } from '../../services/poifinder';
-import { debounceTime, distinctUntilChanged, switchMap} from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil} from 'rxjs/operators';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './map.html',
   styleUrl: './map.css',
 })
 
-export class Map implements OnInit, AfterViewInit {
+export class Map implements OnInit, AfterViewInit, OnDestroy {
   private map!: L.Map;
   searchQuery: string = '';
   public lat: number = 48.1747684; // Épinal par défaut
@@ -28,8 +29,39 @@ export class Map implements OnInit, AfterViewInit {
   error: string | null = null;
   markers: L.Marker[] = [];
   public mcdoIcon!: L.Icon;
+  private ignoreNextChange = false; // Flag pour ignorer la prochaine mise à jour de l'input quand une suggestion est sélectionnée
+
+  @Output() placeSelected = new EventEmitter<any>();
+
+  suggestions = signal<any[]>([]);
+  selectedIndex = signal<number>(-1);
+
+  // 1. Créer un FormControl pour l'input
+  searchControl = new FormControl('');
+
+  // 2. Signal pour la valeur debouncée
+  debouncedValue = signal<string>('');
+
+  // 3. Subject pour gérer la destruction
+  private destroy$ = new Subject<void>();
   
-  constructor(private http: HttpClient, private poiFinder: POIFinderService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, private poiFinder: POIFinderService, private cdr: ChangeDetectorRef) {
+    // 4. Appliquer debounce + distinctUntilChanged sur les changements du FormControl
+    this.searchControl.valueChanges.pipe(
+      debounceTime(300), // Attend 300ms après la dernière saisie
+      distinctUntilChanged(), // Ignore si la valeur n'a pas changé
+      takeUntil(this.destroy$), // Nettoyage à la destruction
+      ).subscribe((value) => {
+        this.searchQuery = value || '';
+
+        if(!this.ignoreNextChange && this.searchQuery.length > 2) { // Lancer la recherche seulement si la longueur de la requête est supérieure à 2 caractères
+          this.search();
+        }
+        else {
+          this.ignoreNextChange = false; // Réinitialiser le flag après l'usage
+        } 
+    });
+  }
 
   // Créer une icône personnalisée pour McDonald's
 
@@ -37,9 +69,14 @@ export class Map implements OnInit, AfterViewInit {
 
   }
   
-
   ngAfterViewInit(): void {
     this.initMap();
+  }
+
+  ngOnDestroy(): void {
+    // Émettre un signal de destruction pour nettoyer les abonnements
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private initMap(): void {
@@ -47,8 +84,12 @@ export class Map implements OnInit, AfterViewInit {
     const initialMapCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
     // const initialMapCenter = {lat: 48.1295499, lng: 6.6753083}; // Tendon
 
-    // Initialisation de la carte
-    this.map = L.map('map').setView(initialMapCenter, 6);
+    // Initialisation de la carte (désactive le control zoom par défaut pour le personnaliser ensuite)
+    this.map = L.map('map', {zoomControl: false}).setView(initialMapCenter, 6);    
+    // Ajout d'un control zoom personnalisé en bas à gauche de la carte pour ne pas masquer la liste des suggestions de recherche qui s'affiche en haut à gauche
+    L.control.zoom({
+      position: 'topright'
+    }).addTo(this.map);
 
     // Ajout de la couche OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -80,9 +121,9 @@ export class Map implements OnInit, AfterViewInit {
     }
 
     // Mettre la première lettre en majuscule pour une meilleure présentation
-    this.searchQuery = this.searchQuery.charAt(0).toUpperCase() + this.searchQuery.slice(1);
+    this.searchQuery = this.searchQuery.charAt(0).toUpperCase() + this.searchQuery.slice(1) + ', France';
 
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery + ', France')}`;
 
     // Utilisation de Nominatim pour rechercher les coordonnées de la ville saisie
     this.http.get<any []>(url).subscribe({
@@ -90,7 +131,10 @@ export class Map implements OnInit, AfterViewInit {
         if(results && results.length >0) {
           const lat = parseFloat(results[0].lat);
           const lon = parseFloat(results[0].lon);
-          this.map.setView([lat, lon], 10);
+          // this.map.setView([lat, lon], 10);
+
+          this.suggestions.set(results.map((r: any) => this.getCityName(r)));
+          this.selectedIndex.set(-1);
 
           this.position = {
             name: results[0].display_name,
@@ -103,23 +147,65 @@ export class Map implements OnInit, AfterViewInit {
           this.lon = parseFloat(results[0].lon);
 
           // Appel la fonction de recherche de POIS (McDOnald's) à proximité de la position saisie
-          this.searchPOIs();
+          // this.searchPOIs();
 
-        } else {
-          alert('Ville non trouvée.');
-        }
+        } 
       },
       error: (err) => {
+        this.suggestions.set([]);
+        this.selectedIndex.set(-1);
         console.error("Erreur lors de la recherche : ", err);
         alert("Erreur lors de la recherche");
+
       }
     });
   }
 
-  inputChange(): void {
+  inputChanged(): void {
     // Réinitialiser les résultats de la recherche précédente
-    console.log(`searchQuery mis à jour : ${this.searchQuery}` );
-    
+    console.log(`searchQuery mis à jour : ${this.searchQuery}` );    
+  }
+
+  getCityName(place: any): string {
+    // Priorité : city > town > village > hamlet > display_name
+    return place.address?.city ||
+          place.address?.town ||
+          place.address?.village ||
+          place.address?.hamlet ||
+          place.display_name.split(',')[0].trim(); // Fallback : premier mot de display_name
+} 
+
+  selectPlace(place: any) {
+    this.ignoreNextChange = true; // Ignore la prochaine mise à jour de l'input quand elle vient de la sélection d'une suggestion 
+    this.searchControl.setValue(place);
+    this.suggestions.set([]);
+    this.selectedIndex.set(-1);
+    this.placeSelected.emit(place);
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    const currentSuggestions = this.suggestions();
+    if (currentSuggestions.length === 0) return;
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.selectedIndex.update(i => Math.min(i + 1, currentSuggestions.length - 1));
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.selectedIndex.update(i => Math.max(i - 1, -1));
+        break;
+      case 'Enter':
+        if (this.selectedIndex() >= 0) {
+          event.preventDefault();
+          this.selectPlace(currentSuggestions[this.selectedIndex()]);
+        }
+        break;
+      case 'Escape':
+        this.suggestions.set([]);
+        break;
+    }
   }
 
   // Recherche des POIs (McDonald's) avec leurs détails (adresses, horaires, site web, ...) à proximité de la position saisie
@@ -152,6 +238,8 @@ export class Map implements OnInit, AfterViewInit {
           // Centrer la carte sur le premier POI trouvé
           const firstPoi = pois[0];
           this.map.setView([firstPoi.lat, firstPoi.lon], 11);
+        } else {
+          alert('Aucun résultat trouvé pour la recherche : ' + this.searchQuery);
         }
 
         // Indiquer que la recherche est terminée et déclencher la détection de changement pour mettre à jour l'interface utilisateur

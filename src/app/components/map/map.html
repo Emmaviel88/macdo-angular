@@ -1,87 +1,42 @@
-
-<div class="saisie">
-    <label for="search">Ville : </label>
-
-    @if (isLoading) {
-      <div class="loading-indicator">🔍</div>
-    }
+<div class="form-row">
+    <div class="form-group">
+        <label for="search">Ville : </label>
+        <input type="text" id="search" [formControl]="searchControl" placeholder="Rechercher..." autocomplete="off" />
+    </div>
     
-    <input type="text" id="search" placeholder="Entrez une ville..." [(ngModel)]="searchQuery" (input)="inputChange()" style="padding: 8px; width:300px; margin-right: 10px;">
-
-    <label for="number">Nombre maxi. de résultats : </label>
-    <input type="number" id="number" [(ngModel)]="limit" placeholder="Limite" style="padding: 8px; width:150px; margin-right: 10px;">
-    <button (click)="search()" [disabled]="isLoading">
-      {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
+    <div class="form-group">
+        <label for="number">Nombre maxi. de résultats : </label>
+        <input type="number" id="number" [(ngModel)]="limit" placeholder="Limite" />
+    </div>
+    <button class="search-button" (click)="searchPOIs()" [disabled]="isLoading">
+        {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
     </button>
 </div>
 
-<!--
-<div class="poi-search-container">
-  <h2>Recherche de Points d'Intérêt (POIs)</h2>
+<div class="form-row">
+     @if (isLoading) {
+      <div class="loading-indicator">🔍 recherche en cours...</div>
+    }
 
-  <div class="search-form">
-    <!--
-    <div class="form-group">
-      <label for="lat">Latitude: {{ lat }}</label>
-      <input type="number" id="lat" [(ngModel)]="lat" step="0.0001" placeholder="Ex: 48.1747684">
-    </div>
-
-    <div class="form-group">
-      <label for="lon">Longitude: {{ lon }}</label>
-      <input type="number" id="lon" [(ngModel)]="lon" step="0.0001" placeholder="Ex: 6.4503643">
-    </div>
-
-    <div class="form-group">
-      <label for="radius">Rayon (m):</label>
-      <input type="number" id="radius" [(ngModel)]="radius" placeholder="Ex: 500">
-    </div>
-
-    <div class="form-group">
-      <label for="amenity">Type de POI:</label>
-      <select id="amenity" [(ngModel)]="amenity">
-        <option value="restaurant">Restaurant</option>
-        <option value="fast-food">Fast-food</option>
-        <option value="cafe">Café</option>
-        <option value="pharmacy">Pharmacie</option>
-        <option value="hotel">Hôtel</option>
-        <option value="supermarket">Supermarché</option>
-        <option value="">Tous</option>
-      </select>
-    </div>
-
-  </div>
-  
-  @if(error) {
-    <div class="error-message">
-      {{ error }}
-    </div>
-  }
-  
-  <div class="pois-results">
-    <h3>{{ pois.length }} restaurants trouvés</h3>
-    
-    <ul>
-    
-      @for(poi of pois; track poi.id; let i = $index) {
-        <li>
-          <strong>{{ poi.id }}. {{ poi.name }}</strong> ({{ poi.type }})
-          <br>
-          <small>Distance: {{ poi.distance?.toFixed(1) }} km, Adresse: {{ poi.address }} {{ poi.address?.village }}</small>
-          <small>Lat: {{ poi.lat.toFixed(4) }}, Lon: {{ poi.lon.toFixed(4) }}</small>
-          <small>Tél.: {{ poi.extratags?.phone }} - Horaires: {{ poi.extratags?.hours }}</small>
-          @if(poi.extratags?.website) {
-            <a href="{{ poi.extratags?.website }}" target="_blank">Site web</a>
-          } @else {
-            <span>Site web non disponible</span>
-          }
-        </li>
-      }    
-    </ul>
-    
-  </div>
-
+    @if(!isLoading && pois.length > 0) {
+        <div><strong>{{ pois.length }} restaurants trouvés</strong></div>
+    }
 </div>
--->
 
+<div class="form-row">
+    <div class="suggestions-container">
+        @if (suggestions().length > 0 && !isLoading) {
+        <ul class="suggestions-list">
+            @for (place of suggestions(); track place.place_id; let i = $index) {
+            <li (click)="selectPlace( place )" [class.selected]="i === selectedIndex()" >
+                {{ place }}
+            </li>
+            }
+        </ul>
+        }
+    </div>
+</div>
 
-<div id="map" style="height: 800px; width: 100%;"></div>
+<div class="form-row">
+    <div id="map" style="height: 750px; width: 100%;"></div>
+</div>
