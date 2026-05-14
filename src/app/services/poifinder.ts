@@ -68,6 +68,7 @@ export class POIFinderService {
     const headers = new HttpHeaders({
       'User-Agent': this.userAgent
     });
+    
     console.log('Headers pour Nominatim : ', headers);
 
     return this.http.get<any[]>(this.nominatimUrl, { headers, params }).pipe(

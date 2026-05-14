@@ -1,13 +1,21 @@
-<div class="saisie">
-    <input type="text" id="search" placeholder="Entrez une ville..." [(ngModel)]="searchQuery" style="padding: 8px; width:300px; margin-right: 10px;">
 
-    <input type="number" [(ngModel)]="limit" placeholder="Limite" style="padding: 8px; width:150px; margin-right: 10px;">
+<div class="saisie">
+    <label for="search">Ville : </label>
+
+    @if (isLoading) {
+      <div class="loading-indicator">🔍</div>
+    }
+    
+    <input type="text" id="search" placeholder="Entrez une ville..." [(ngModel)]="searchQuery" (input)="inputChange()" style="padding: 8px; width:300px; margin-right: 10px;">
+
+    <label for="number">Nombre maxi. de résultats : </label>
+    <input type="number" id="number" [(ngModel)]="limit" placeholder="Limite" style="padding: 8px; width:150px; margin-right: 10px;">
     <button (click)="search()" [disabled]="isLoading">
       {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
     </button>
-    <!-- <button (click)="search()" style="padding: 8px 16px;">Rechercher</button> -->
 </div>
 
+<!--
 <div class="poi-search-container">
   <h2>Recherche de Points d'Intérêt (POIs)</h2>
 
@@ -40,7 +48,7 @@
         <option value="">Tous</option>
       </select>
     </div>
-    -->
+
   </div>
   
   @if(error) {
@@ -73,6 +81,7 @@
   </div>
 
 </div>
+-->
 
 
 <div id="map" style="height: 800px; width: 100%;"></div>
