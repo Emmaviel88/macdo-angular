@@ -8,19 +8,23 @@
         <label for="number">Nombre maxi. de résultats : </label>
         <input type="number" id="number" [(ngModel)]="limit" placeholder="Limite" />
     </div>
-    <button class="search-button" (click)="searchPOIs()" [disabled]="isLoading">
+    <div class="form-group">
+        <label for="search-button">          </label>
+        <button id="search-button" class="search-button" (click)="searchPOIs()">
         {{ isLoading ? 'Recherche en cours...' : 'Rechercher' }}
-    </button>
+         </button>
+    </div>
 </div>
 
 <div class="form-row">
-     @if (isLoading) {
-      <div class="loading-indicator">🔍 recherche en cours...</div>
-    }
-
+    <!--Affichage conditionnel de la liste de suggestions-->
+    <div class="loading-indicator">{{ isLoading ? '🔍 recherche en cours...' : '_______________________' }}</div>
+    <div class="error-message"></div>
+    <!--Affichage conditionnel du nombre de restaurants trouvés-->
     @if(!isLoading && pois.length > 0) {
-        <div><strong>{{ pois.length }} restaurants trouvés</strong></div>
+        <div><strong>{{ pois.length }} {{ pois.length === 1 ? 'restaurant trouvé' : 'restaurants trouvés' }}</strong></div>
     }
+    <button class="reset-map" (click)="resetMap()">Reset view</button>
 </div>
 
 <div class="form-row">
@@ -38,5 +42,5 @@
 </div>
 
 <div class="form-row">
-    <div id="map" style="height: 750px; width: 100%;"></div>
+    <div id="map" style="height: 75vh; width: 100%;"></div>
 </div>

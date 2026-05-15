@@ -36,24 +36,27 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
   suggestions = signal<any[]>([]);
   selectedIndex = signal<number>(-1);
 
-  // 1. Créer un FormControl pour l'input
+  // FormControl pour l'input
   searchControl = new FormControl('');
 
-  // 2. Signal pour la valeur debouncée
-  debouncedValue = signal<string>('');
+  // variables pour stocker les coordonnées initiales de la carte (Paris) pour pouvoir y revenir lors du reset de la carte
+  // Coordonnées de Paris par défaut
+     private initialMapCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
+    // private initialMapCenter = {lat: 48.1295499, lng: 6.6753083}; // Tendon
+    private initialZoomLevel = 6; // Niveau de zoom par défaut
 
-  // 3. Subject pour gérer la destruction
+  // Subject pour gérer la destruction
   private destroy$ = new Subject<void>();
   
   constructor(private http: HttpClient, private poiFinder: POIFinderService, private cdr: ChangeDetectorRef) {
-    // 4. Appliquer debounce + distinctUntilChanged sur les changements du FormControl
+    // Appliquer debounce + distinctUntilChanged sur les changements du FormControl
     this.searchControl.valueChanges.pipe(
       debounceTime(300), // Attend 300ms après la dernière saisie
       distinctUntilChanged(), // Ignore si la valeur n'a pas changé
       takeUntil(this.destroy$), // Nettoyage à la destruction
       ).subscribe((value) => {
         this.searchQuery = value || '';
-
+        
         if(!this.ignoreNextChange && this.searchQuery.length > 2) { // Lancer la recherche seulement si la longueur de la requête est supérieure à 2 caractères
           this.search();
         }
@@ -80,12 +83,8 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private initMap(): void {
-    // Coordonnées de Paris par défaut
-    const initialMapCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
-    // const initialMapCenter = {lat: 48.1295499, lng: 6.6753083}; // Tendon
-
     // Initialisation de la carte (désactive le control zoom par défaut pour le personnaliser ensuite)
-    this.map = L.map('map', {zoomControl: false}).setView(initialMapCenter, 6);    
+    this.map = L.map('map', {zoomControl: false}).setView(this.initialMapCenter, this.initialZoomLevel);    
     // Ajout d'un control zoom personnalisé en bas à gauche de la carte pour ne pas masquer la liste des suggestions de recherche qui s'affiche en haut à gauche
     L.control.zoom({
       position: 'topright'
@@ -211,7 +210,18 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
   // Recherche des POIs (McDonald's) avec leurs détails (adresses, horaires, site web, ...) à proximité de la position saisie
   searchPOIs(): void {
     let horaires : string = '';
+    // Vérifier que la requête de recherche n'est pas vide avant de lancer la recherche des POIs
+    if(this.searchQuery === '') {
+          this.suggestions.set([]);
+          this.selectedIndex.set(-1);
+          console.error('La requête de recherche est vide.');
+          alert('La requête de recherche est vide !');
+          return;
+    }
+
     // Pour animations d'affichages
+    this.suggestions.set([]);
+    this.selectedIndex.set(-1);
     this.isLoading = true;
     this.error = null;
 
@@ -290,4 +300,16 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
     });
     this.markers = []; // Vider le tableau
   }
-} 
+
+  resetMap(): void {
+    // Réinitialiser la vue de la carte à la position initiale (Paris) et au niveau de zoom par défaut
+    this.map.setView(this.initialMapCenter, this.initialZoomLevel);
+    // Supprimer tous les markers de la carte
+    this.clearMarkers();
+    // Réinitialiser les résultats de la recherche précédente
+    this.pois = [];
+    this.suggestions.set([]);
+    this.selectedIndex.set(-1);
+    this.isLoading = false;
+  } 
+}
