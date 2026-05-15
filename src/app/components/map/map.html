@@ -1,11 +1,11 @@
 <div class="form-row">
     <div class="form-group">
-        <label for="search">Ville : </label>
+        <label for="search">Ville où chercher : </label>
         <input type="text" id="search" [formControl]="searchControl" placeholder="Rechercher..." autocomplete="off" />
     </div>
     
     <div class="form-group">
-        <label for="number">Nombre maxi. de résultats : </label>
+        <label for="number">Limiter les recherhces à : </label>
         <input type="number" id="number" [(ngModel)]="limit" placeholder="Limite" />
     </div>
     <div class="form-group">
@@ -18,7 +18,7 @@
 
 <div class="form-row">
     <!--Affichage conditionnel de la liste de suggestions-->
-    <div class="loading-indicator">{{ isLoading ? '🔍 recherche en cours...' : '_______________________' }}</div>
+    <div class="loading-indicator">{{ isLoading ? '🔍 recherche en cours...' : '' }}</div>
     <div class="error-message"></div>
     <!--Affichage conditionnel du nombre de restaurants trouvés-->
     @if(!isLoading && pois.length > 0) {

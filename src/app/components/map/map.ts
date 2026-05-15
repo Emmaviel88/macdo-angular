@@ -41,7 +41,7 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
 
   // variables pour stocker les coordonnées initiales de la carte (Paris) pour pouvoir y revenir lors du reset de la carte
   // Coordonnées de Paris par défaut
-     private initialMapCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
+     private initialMapCenter = { lat: 47.0000, lng: 2.3522 }; // Paris
     // private initialMapCenter = {lat: 48.1295499, lng: 6.6753083}; // Tendon
     private initialZoomLevel = 6; // Niveau de zoom par défaut
 
@@ -166,13 +166,18 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getCityName(place: any): string {
+    console.log('map-169 : place: ', place);
+
+    let cityName = '';
     // Priorité : city > town > village > hamlet > display_name
-    return place.address?.city ||
+    cityName = place.address?.city ||
           place.address?.town ||
           place.address?.village ||
           place.address?.hamlet ||
           place.display_name.split(',')[0].trim(); // Fallback : premier mot de display_name
-} 
+
+    return place.postCode ? `${cityName} (${place.postCode})` : cityName;
+  } 
 
   selectPlace(place: any) {
     this.ignoreNextChange = true; // Ignore la prochaine mise à jour de l'input quand elle vient de la sélection d'une suggestion 
@@ -304,6 +309,8 @@ export class Map implements OnInit, AfterViewInit, OnDestroy {
   resetMap(): void {
     // Réinitialiser la vue de la carte à la position initiale (Paris) et au niveau de zoom par défaut
     this.map.setView(this.initialMapCenter, this.initialZoomLevel);
+    this.searchQuery = '';
+    this.searchControl.setValue('');
     // Supprimer tous les markers de la carte
     this.clearMarkers();
     // Réinitialiser les résultats de la recherche précédente

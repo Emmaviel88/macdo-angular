@@ -38,21 +38,23 @@ html, body {
   font-size: 16px;
 }
 
-.search-button {
-  right: 0;
+.search-button, .reset-map {
+  position: absolute;
+  top: 40px;
+  right: 20px;
   padding: 8px 16px;
   background-color: #0066cc;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 16px;
   height: 40px;
   white-space: nowrap;
-  /*width: 220px;*/
+  width: 220px;
 }
 
-.search-button:hover {
+.search-button:hover, .reset-map:hover {
   background-color: #0052a3;
 }
 
@@ -90,15 +92,5 @@ html, body {
 }
 
 .reset-map {
-  right: 20px;
-  padding: 8px 16px;
-  background-color: #0066cc;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  height: 40px;
-  white-space: nowrap;
-  width: 220px;
+  top: 100px;
 }
